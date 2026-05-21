@@ -1,85 +1,30 @@
-#app {
-    height: var(--app-height);
-    display: flex;
-    flex-direction: column;
-}
-
-/* --- GESTION DES VUES --- */
-.view {
+/* --- PILE DE CARTES (Le "Tinder") --- */
+#card-stack {
     flex: 1;
-    display: none; /* Caché par défaut */
-    flex-direction: column;
     position: relative;
-    overflow-y: auto;
+    margin: calc(var(--spacing-base) * 2);
+    /* Indispensable : bloque les comportements tactiles natifs (scroll, retour arrière) sur la pile */
+    touch-action: none; 
 }
 
-.view.active {
-    display: flex; /* Affiche uniquement la vue active */
-}
-
-/* --- EN-TÊTE --- */
-.top-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: calc(var(--spacing-base) * 2);
-    background: var(--bg-color);
-}
-
-.top-bar h1 {
-    font-size: 1.5rem;
-    color: var(--primary-color);
-}
-
-.icon-btn {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-}
-
-/* --- NAVIGATION BAS --- */
-.bottom-nav {
-    display: flex;
-    justify-content: space-around;
+.recipe-card {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background: var(--card-bg);
-    padding-top: 12px;
-    padding-bottom: calc(env(safe-area-inset-bottom, 12px) + 12px);
-    border-top: 1px solid var(--line-color);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    /* Optimisation GPU */
+    will-change: transform; 
+    transform-origin: 50% 100%; /* Le point de rotation est en bas de la carte (effet pendule) */
 }
 
-.nav-item {
-    background: none;
-    border: none;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: var(--text-light);
-    gap: 4px;
-    cursor: pointer;
-    transition: color 0.2s;
+.card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none; /* Empêche les bugs de sélection d'image */
 }
-
-.nav-item .icon { font-size: 1.5rem; filter: grayscale(100%); opacity: 0.5; }
-.nav-item .label { font-size: 0.75rem; font-weight: bold; }
-
-.nav-item.active { color: var(--primary-color); }
-.nav-item.active .icon { filter: grayscale(0%); opacity: 1; }
-
-/* --- TOAST (Notification) --- */
-#toast {
-    position: fixed;
-    bottom: -100px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--text-main);
-    color: white;
-    padding: 12px 24px;
-    border-radius: 30px;
-    font-weight: bold;
-    font-size: 0.9rem;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    transition: bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    z-index: 2000;
-}
-#toast.show { bottom: 90px; }

@@ -1,13 +1,12 @@
 // js/app.js
 import { initNavigation, showToast } from './navigation.js';
+import { initSwipe } from './swipe-engine.js';
 
-// On attend que le HTML soit totalement lu par le navigateur
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Nexus Food : Séquence de démarrage initiée...');
     
-    // 1. Initialisation de la navigation
     initNavigation();
+    initSwipe(); // On initialise la création et la physique des cartes
 
-    // Petit test pour vérifier que tout fonctionne
     showToast("Application prête ! 🚀");
 });
