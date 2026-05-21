@@ -31,17 +31,46 @@
             <header class="top-bar">
                 <h1>Mon Frigo</h1>
             </header>
+            
             <section class="content-area">
-                <p>Contenu du frigo à venir...</p>
+                <div class="search-container">
+                    <input type="text" id="ingredient-search" placeholder="🔍 Ajouter un ingrédient...">
+                </div>
+
+                <div class="fridge-section">
+                    <h3>Mon Stock Actuel</h3>
+                    <div class="tag-cloud" id="my-stock-tags">
+                        <p class="empty-state">Ton frigo est vide. Ajoute des ingrédients !</p>
+                    </div>
+                </div>
+
+                <div class="fridge-section" style="margin-top: 30px;">
+                    <h3>Ajout Rapide</h3>
+                    <div class="tag-cloud" id="essential-tags">
+                        </div>
+                </div>
             </section>
         </main>
 
         <main id="view-shopping" class="view">
             <header class="top-bar">
                 <h1>Liste de courses</h1>
+                <button id="btn-clear-purchased" class="icon-btn" title="Vider le caddie">🧹</button>
             </header>
+            
             <section class="content-area">
-                <p>Liste de courses à venir...</p>
+                <div class="search-container">
+                    <input type="text" id="shopping-input" placeholder="🛒 Ajouter à la liste (Entrée)...">
+                </div>
+
+                <div class="shopping-list-container">
+                    <ul id="shopping-list-active" class="shopping-list">
+                        </ul>
+
+                    <h3 class="completed-title" id="completed-title" style="display: none;">Déjà dans le caddie</h3>
+                    <ul id="shopping-list-completed" class="shopping-list completed">
+                        </ul>
+                </div>
             </section>
         </main>
 

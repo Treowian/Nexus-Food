@@ -1,22 +1,26 @@
 // js/navigation.js
 
-export function initNavigation() {
-    // On sélectionne tous les boutons du bas et toutes nos vues (main)
+// js/navigation.js
+
+// On ajoute le paramètre "onNavigate"
+export function initNavigation(onNavigate) {
     const navItems = document.querySelectorAll('.nav-item');
     const views = document.querySelectorAll('.view');
 
     navItems.forEach(item => {
         item.addEventListener('click', () => {
-            // 1. On retire l'état "actif" de tous les boutons et de toutes les vues
             navItems.forEach(nav => nav.classList.remove('active'));
             views.forEach(view => view.classList.remove('active'));
 
-            // 2. On active uniquement le bouton cliqué
             item.classList.add('active');
-
-            // 3. On affiche la vue correspondante grâce à l'attribut data-target
+            
             const targetId = item.getAttribute('data-target');
             document.getElementById(targetId).classList.add('active');
+            
+            // ⚠️ NOUVEAU : Si une fonction a été fournie, on l'appelle en lui donnant le nom du nouvel onglet
+            if (typeof onNavigate === 'function') {
+                onNavigate(targetId);
+            }
         });
     });
 }
