@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nexus Food</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff4757">
+    <link rel="icon" type="image/png" href="assets/icon.png">
+    
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+    <div id="toast" class="toast-hidden">🔔 <span id="toast-msg">Action confirmée</span></div>
+
+    <div id="app">
+        <main id="view-recipes" class="view active">
+            <header class="top-bar">
+                <h1>Que manger ?</h1>
+                <button id="btn-filters" class="icon-btn">⚙️</button>
+            </header>
+            <section id="card-stack">
+                <p style="text-align:center; color: var(--text-light); margin-top: 50px;">Chargement des recettes...</p>
+            </section>
+        </main>
+
+        <main id="view-fridge" class="view">
+            <header class="top-bar">
+                <h1>Mon Frigo</h1>
+            </header>
+            <section class="content-area">
+                <p>Contenu du frigo à venir...</p>
+            </section>
+        </main>
+
+        <main id="view-shopping" class="view">
+            <header class="top-bar">
+                <h1>Liste de courses</h1>
+            </header>
+            <section class="content-area">
+                <p>Liste de courses à venir...</p>
+            </section>
+        </main>
+
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-target="view-recipes">
+                <span class="icon">🍽️</span>
+                <span class="label">Recettes</span>
+            </button>
+            <button class="nav-item" data-target="view-fridge">
+                <span class="icon">❄️</span>
+                <span class="label">Frigo</span>
+            </button>
+            <button class="nav-item" data-target="view-shopping">
+                <span class="icon">🛒</span>
+                <span class="label">Courses</span>
+            </button>
+        </nav>
+    </div>
+
+    <script src="js/app.js" type="module"></script>
+    <script src="js/navigation.js" type="module"></script>
+</body>
+</html>

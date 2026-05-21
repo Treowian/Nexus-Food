@@ -1,0 +1,28 @@
+:root {
+    --primary-color: #ff4757; /* Rouge dynamique type Youmiam */
+    --bg-color: #f1f2f6;
+    --card-bg: #ffffff;
+    --text-main: #2f3542;
+    --text-light: #a4b0be;
+    --line-color: #dfe4ea;
+    --spacing-base: 8px;
+    
+    /* Hauteur dynamique pour éviter les bugs Safari iOS */
+    --app-height: 100dvh; 
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    /* Empêche la sélection de texte accidentelle en swipant */
+    user-select: none; 
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    overflow: hidden; /* Empêche le scroll sur la page entière */
+}
