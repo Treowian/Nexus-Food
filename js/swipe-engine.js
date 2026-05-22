@@ -3,12 +3,15 @@ import { getStock } from './fridge.js';
 import { getRecommendations } from './database.js';
 import { addMissingItems } from './shopping.js'; // ⚠️ On importe notre nouvelle fonction
 
-export function initSwipe() {
+export async function initSwipe() {
     const stack = document.getElementById('card-stack');
-    stack.innerHTML = ''; 
+    stack.innerHTML = '<p style="text-align:center; margin-top:50px; color: var(--text-light);">Connexion au serveur...</p>'; 
 
     const monFrigo = getStock();
-    const recettesTriees = getRecommendations(monFrigo);
+    // ⚠️ Ajout du mot-clé "await" pour attendre la réponse de Supabase
+    const recettesTriees = await getRecommendations(monFrigo);
+
+    stack.innerHTML = ''; // On efface le message de chargement
 
     if (recettesTriees.length === 0) {
         stack.innerHTML = '<p style="text-align:center; margin-top:50px;">Aucune recette trouvée.</p>';
