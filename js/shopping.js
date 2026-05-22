@@ -1,16 +1,14 @@
 // js/shopping.js
 import { showToast } from './navigation.js';
+import { addItemsToFridge } from './fridge.js';
+import { supabase } from './supabase.js'; // Import de la connexion
 
-// Notre base de données temporaire pour les courses
-let shoppingItems = [
-    { id: 1, name: "Lait", checked: false },
-    { id: 2, name: "Beurre", checked: true }
-];
+let shoppingItems = [];
 
-export function initShopping() {
-    renderShoppingList();
+export async function initShopping() {
+    // 1. Chargement initial des courses depuis la base de données
+    await loadShoppingFromDB();
 
-    // 1. Ajouter un article via Entrée
     const input = document.getElementById('shopping-input');
     input.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && input.value.trim() !== '') {
@@ -19,42 +17,113 @@ export function initShopping() {
         }
     });
 
-    // 2. Nettoyer le caddie (Bouton Balai)
-    document.getElementById('btn-clear-purchased').addEventListener('click', () => {
-        const checkedCount = shoppingItems.filter(item => item.checked).length;
-        if (checkedCount > 0) {
+    // Nettoyer le caddie (Bouton Balai) et envoyer au Frigo
+    document.getElementById('btn-clear-purchased').addEventListener('click', async () => {
+        const checkedItems = shoppingItems.filter(item => item.checked);
+        
+        if (checkedItems.length > 0) {
+            const itemNames = checkedItems.map(item => item.name);
+            
+            // On envoie au frigo (qui gère sa propre base Supabase)
+            await addItemsToFridge(itemNames);
+            
+            // Suppression en masse sur Supabase pour les articles cochés
+            // L'opérateur 'in' permet de supprimer toutes les lignes dont le nom est dans notre tableau
+            await supabase.from('shopping_list').delete().in('name', itemNames);
+
+            // Mise à jour locale
             shoppingItems = shoppingItems.filter(item => !item.checked);
             renderShoppingList();
-            showToast(`${checkedCount} article(s) supprimé(s)`);
+            
+            showToast(`${checkedItems.length} article(s) transféré(s) au Frigo ! ❄️`);
         } else {
             showToast("Le caddie est déjà vide !");
         }
     });
 }
 
-function addItem(name) {
-    const newItem = {
-        id: Date.now(), // Un ID unique basé sur l'heure
-        name: name,
-        checked: false
-    };
-    shoppingItems.unshift(newItem); // Ajoute au tout début de la liste
-    renderShoppingList();
-    showToast("Ajouté aux courses");
-}
-
-// Fonction attachée à l'objet global window pour être appelée depuis le HTML généré
-window.toggleShoppingItem = function(id) {
-    const item = shoppingItems.find(i => i.id === id);
-    if (item) {
-        item.checked = !item.checked; // Inverse l'état
+// Charger les données de Supabase
+async function loadShoppingFromDB() {
+    const { data, error } = await supabase.from('shopping_list').select('*').order('created_at', { ascending: false });
+    if (!error && data) {
+        shoppingItems = data;
         renderShoppingList();
     }
 }
 
-window.deleteShoppingItem = function(id) {
+// Ajouter un article (ex: Déodorant, Poulet...)
+async function addItem(name) {
+    const formattedName = name.charAt(0).toUpperCase() + name.slice(1);
+    
+    // Éviter les doublons visuels immédiats
+    if (shoppingItems.some(item => item.name.toLowerCase() === formattedName.toLowerCase())) {
+        showToast("Cet article est déjà dans ta liste !");
+        return;
+    }
+
+    const newItem = {
+        name: formattedName,
+        checked: false
+    };
+
+    // Optimistic UI : Ajout local pour une réactivité instantanée
+    shoppingItems.unshift(newItem);
+    renderShoppingList();
+    showToast("Ajouté aux courses");
+
+    // Sauvegarde en base de données
+    await supabase.from('shopping_list').insert([newItem]);
+    
+    // On recharge pour récupérer l'ID généré par Supabase (nécessaire pour le cocher/supprimer plus tard)
+    await loadShoppingFromDB();
+}
+
+// Recevoir les ingrédients manquants depuis le Swipe de recettes
+export async function addMissingItems(itemsArray) {
+    if (!itemsArray || itemsArray.length === 0) return;
+
+    const newRows = [];
+    
+    itemsArray.forEach(name => {
+        const formattedName = name.charAt(0).toUpperCase() + name.slice(1);
+        const alreadyExists = shoppingItems.find(i => i.name.toLowerCase() === formattedName.toLowerCase());
+        
+        if (!alreadyExists) {
+            const newItem = { name: formattedName, checked: false };
+            shoppingItems.unshift(newItem);
+            newRows.push(newItem);
+        }
+    });
+
+    if (newRows.length > 0) {
+        renderShoppingList();
+        // Envoi groupé sur Supabase
+        await supabase.from('shopping_list').insert(newRows);
+        await loadShoppingFromDB();
+    }
+}
+
+// Inverser l'état coché/décoché (Mise à jour)
+window.toggleShoppingItem = async function(id) {
+    const item = shoppingItems.find(i => i.id === id);
+    if (item) {
+        item.checked = !item.checked;
+        renderShoppingList();
+
+        // ⚠️ NOUVEAU : On met à jour la ligne sur Supabase (.update) en ciblant son ID (.eq)
+        await supabase.from('shopping_list')
+            .update({ checked: item.checked })
+            .eq('id', id);
+    }
+}
+
+// Supprimer un article définitivement via la croix
+window.deleteShoppingItem = async function(id) {
     shoppingItems = shoppingItems.filter(i => i.id !== id);
     renderShoppingList();
+
+    // Suppression sur Supabase
+    await supabase.from('shopping_list').delete().eq('id', id);
 }
 
 function renderShoppingList() {
@@ -69,15 +138,15 @@ function renderShoppingList() {
 
     shoppingItems.forEach(item => {
         const li = document.createElement('li');
+        // On s'assure d'utiliser des guillemets simples pour entourer l'ID s'il s'agit d'un UUID de Supabase
         li.className = `shopping-item ${item.checked ? 'checked' : ''}`;
         
-        // Structure de notre ligne : [Coche + Nom] ----- [Poubelle]
         li.innerHTML = `
-            <div class="item-left" onclick="toggleShoppingItem(${item.id})">
+            <div class="item-left" onclick="toggleShoppingItem('${item.id}')">
                 <div class="checkbox">✓</div>
                 <span class="item-name">${item.name}</span>
             </div>
-            <button class="btn-delete" onclick="deleteShoppingItem(${item.id})">×</button>
+            <button class="btn-delete" onclick="deleteShoppingItem('${item.id}')">×</button>
         `;
 
         if (item.checked) {
@@ -88,32 +157,5 @@ function renderShoppingList() {
         }
     });
 
-    // Affiche ou masque le titre "Déjà dans le caddie"
     completedTitle.style.display = hasCompleted ? 'block' : 'none';
-}
-
-// Fonction publique pour recevoir les ingrédients manquants d'une recette
-export function addMissingItems(itemsArray) {
-    if (!itemsArray || itemsArray.length === 0) return;
-
-    let addedCount = 0;
-    
-    itemsArray.forEach(name => {
-        // On vérifie que l'article n'est pas DÉJÀ dans la liste (pour éviter les doublons)
-        const alreadyExists = shoppingItems.find(i => i.name.toLowerCase() === name.toLowerCase() && !i.checked);
-        
-        if (!alreadyExists) {
-            shoppingItems.unshift({ 
-                id: Date.now() + Math.random(), // Génère un ID unique
-                name: name, 
-                checked: false 
-            });
-            addedCount++;
-        }
-    });
-
-    // On rafraîchit l'interface uniquement si on a ajouté quelque chose
-    if (addedCount > 0) {
-        renderShoppingList();
-    }
 }
