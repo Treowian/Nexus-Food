@@ -276,3 +276,21 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
+
+/* --- BOUTON DESTINATION FRIGO --- */
+.fridge-toggle {
+    font-size: 1.2rem;
+    opacity: 0.2; /* Grisé par défaut (N'ira pas au frigo) */
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.2s;
+    padding: 0 8px;
+    user-select: none;
+}
+
+.fridge-toggle:active {
+    transform: scale(0.8);
+}
+
+.fridge-toggle.active {
+    opacity: 1; /* Allumé (Ira au frigo) */
+}
