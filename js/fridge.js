@@ -11,16 +11,25 @@ export async function initFridge() {
     const searchInput = document.getElementById('ingredient-search');
     const qtyInput = document.getElementById('ingredient-qty');
 
-    // Événement sur la touche Entrée
-    searchInput.addEventListener('keypress', async (e) => {
-        if (e.key === 'Enter' && searchInput.value.trim() !== '') {
+    const triggerFridgeAdd = async () => {
+        if (searchInput.value.trim() !== '') {
             const qte = qtyInput.value.trim() || '1';
             await addOrUpdateIngredient(searchInput.value.trim(), qte);
             searchInput.value = ''; 
             qtyInput.value = '';
+            searchInput.focus(); // Remet le curseur sur le nom
         }
+    };
+
+    // Entrée sur le nom
+    searchInput.addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter') await triggerFridgeAdd();
     });
-}
+
+    // Entrée sur la quantité
+    qtyInput.addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter') await triggerFridgeAdd();
+    });
 
 async function loadStockFromDB() {
     const { data, error } = await supabase.from('fridge').select('name, qty');

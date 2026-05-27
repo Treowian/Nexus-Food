@@ -11,13 +11,25 @@ export async function initShopping() {
     const input = document.getElementById('shopping-input');
     const qtyInput = document.getElementById('shopping-qty');
 
-    input.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && input.value.trim() !== '') {
+    // Fonction commune pour valider l'ajout
+    const triggerAdd = () => {
+        if (input.value.trim() !== '') {
             const qty = qtyInput.value.trim() || '1';
             addItem(input.value.trim(), qty);
             input.value = ''; 
             qtyInput.value = '';
+            input.focus(); // Remet le curseur automatiquement sur le nom pour l'article suivant
         }
+    };
+
+    // Écoute la touche Entrée sur le NOM
+    input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') triggerAdd();
+    });
+
+    // Écoute aussi la touche Entrée sur la QUANTITÉ
+    qtyInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') triggerAdd();
     });
 
     document.getElementById('btn-clear-purchased').addEventListener('click', async () => {
