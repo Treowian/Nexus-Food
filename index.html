@@ -18,13 +18,21 @@
 
     <div id="app">
         <main id="view-recipes" class="view active">
-            <header class="top-bar">
-                <h1>Que manger ?</h1>
-                <button id="btn-filters" class="icon-btn">⚙️</button>
-            </header>
-            <section id="card-stack">
-                <p style="text-align:center; color: var(--text-light); margin-top: 50px;">Chargement des recettes...</p>
-            </section>
+          <main id="view-recipes" class="view active">
+            
+            <div class="search-header">
+                <input type="text" id="recipe-search-input" placeholder="🔍 Rechercher (ex: Pâtes, Poulet)...">
+                <div class="filter-tags" id="recipe-filters">
+                    <button class="filter-tag active" data-tag="all">Tout</button>
+                    <button class="filter-tag" data-tag="végétarien">🥬 Végétarien</button>
+                    <button class="filter-tag" data-tag="italien">🍝 Italien</button>
+                    <button class="filter-tag" data-tag="express">⏱️ Express</button>
+                    <button class="filter-tag" data-tag="healthy">🥗 Healthy</button>
+                </div>
+            </div>
+
+            <div class="card-stack" id="card-stack">
+                </div>
         </main>
 
         <main id="view-fridge" class="view">

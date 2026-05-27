@@ -1,29 +1,56 @@
 // js/swipe-engine.js
+// js/swipe-engine.js
 import { getStock } from './fridge.js';
 import { getRecommendations } from './database.js';
 import { addMissingItems } from './shopping.js';
+import { initSearchEngine } from './components/search-engine.js'; // Import du moteur
+
+let toutesLesRecettes = []; // Mémoire locale pour éviter de re-télécharger
 
 export async function initSwipe() {
     const stack = document.getElementById('card-stack');
     if (!stack) return;
     
-    stack.innerHTML = '<p style="text-align:center; margin-top:50px; color: var(--text-light);">Chargement des recettes...</p>'; 
+    stack.innerHTML = '<p style="text-align:center; margin-top:50px; color: var(--text-light);">Recherche des meilleures recettes...</p>'; 
 
     const monFrigo = getStock();
-    const recettesTriees = await getRecommendations(monFrigo);
+    toutesLesRecettes = await getRecommendations(monFrigo);
 
-    stack.innerHTML = ''; // Nettoyage de l'écran de chargement
+    // Initialisation des écouteurs du moteur de recherche
+    initSearchEngine();
 
-    if (!recettesTriees || recettesTriees.length === 0) {
-        stack.innerHTML = '<p style="text-align:center; margin-top:50px;">Aucune recette trouvée.</p>';
+    // Premier affichage : on montre tout ('all' et texte vide '')
+    applyFiltersAndRender('', 'all');
+}
+
+// ⚠️ NOUVELLE FONCTION EXPORTÉE : Filtre et reconstruit les cartes
+export function applyFiltersAndRender(searchQuery, tag) {
+    const stack = document.getElementById('card-stack');
+    if (!stack) return;
+
+    // Le filtrage magique (Texte + Tag)
+    const recettesFiltrees = toutesLesRecettes.filter(recipe => {
+        const matchText = recipe.title.toLowerCase().includes(searchQuery);
+        
+        let matchTag = true;
+        if (tag !== 'all') {
+            matchTag = recipe.tags && recipe.tags.includes(tag);
+        }
+
+        return matchText && matchTag;
+    });
+
+    stack.innerHTML = ''; // On nettoie la table
+
+    if (recettesFiltrees.length === 0) {
+        stack.innerHTML = '<p style="text-align:center; margin-top:50px;">Aucune recette ne correspond à ces critères.</p>';
         return;
     }
 
-    recettesTriees.reverse().forEach(recipe => {
+    // Reconstruction des cartes sur les recettes filtrées
+    recettesFiltrees.reverse().forEach(recipe => {
         const card = document.createElement('article');
         card.className = 'recipe-card';
-        
-        // ⚠️ Encodage JSON strict pour éviter l'erreur [object Object]
         card.dataset.missing = JSON.stringify(recipe.missingItems || []); 
         card.dataset.recipe = JSON.stringify(recipe); 
         
