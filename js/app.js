@@ -4,6 +4,15 @@ import { initSwipe } from './swipe-engine.js';
 import { initFridge } from './fridge.js';
 import { initShopping } from './shopping.js';
 
+// Activation de la PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then(() => console.log('PWA prête à être installée !'))
+            .catch(err => console.error('Erreur PWA :', err));
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Nexus Food : Séquence de démarrage initiée...');
     
