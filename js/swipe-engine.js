@@ -25,6 +25,7 @@ export async function initSwipe() {
         // ⚠️ ASTUCE ARCHITECTURE : On cache les ingrédients manquants dans l'élément HTML
         // On utilise un séparateur "|" car une virgule pourrait faire partie du nom d'un ingrédient
         card.dataset.missing = recipe.missingItems.join('|'); 
+        card.dataset.recipe = JSON.stringify(recipe);
         
         let badgeColor = recipe.missingCount === 0 ? '#2ed573' : 'var(--primary-color)';
         let badgeText = recipe.missingCount === 0 ? '✨ Prêt à cuisiner !' : `⚠️ ${recipe.missingCount} manquant(s)`;
@@ -76,8 +77,15 @@ function attachSwipeEvents() {
 
         const threshold = window.innerWidth * 0.25; 
 
+        // ⚠️ NOUVEAUTÉ : Détection du "Tap" (Clic simple)
+        if (Math.abs(currentX) < 10 && Math.abs(currentY) < 10) {
+            const recipeData = JSON.parse(topCard.dataset.recipe);
+            openCookingMode(recipeData);
+            return; // On arrête là
+        }
+
+        // Sinon, c'est un swipe classique
         if (currentX > threshold) {
-            // ⚠️ On transmet la donnée "missing" à la fonction d'éjection
             swipeCard(topCard, window.innerWidth, 'droite', topCard.dataset.missing);
         } else if (currentX < -threshold) {
             swipeCard(topCard, -window.innerWidth, 'gauche');
@@ -110,4 +118,55 @@ function swipeCard(card, directionX, choix, missingData = "") {
         
         attachSwipeEvents(); 
     }, 300);
+}
+
+// Affiche la vue détaillée de la recette
+function openCookingMode(recipe) {
+    const modal = document.getElementById('recipe-modal');
+    const content = document.getElementById('modal-content');
+    
+    // Génération de la liste des ingrédients avec les QUANTITÉS
+    let ingredientsHTML = '<h3>Ingrédients</h3><div style="margin-bottom: 24px;">';
+    recipe.ingredients.forEach(ing => {
+        ingredientsHTML += `
+            <div class="ingredient-line">
+                <span>${ing.name}</span>
+                <span class="ingredient-qty">${ing.qty}</span>
+            </div>
+        `;
+    });
+    ingredientsHTML += '</div>';
+
+    // Génération des étapes de préparation
+    let stepsHTML = '<h3>Préparation</h3>';
+    if (recipe.steps && recipe.steps.length > 0) {
+        recipe.steps.forEach((step, index) => {
+            stepsHTML += `
+                <div class="step-block">
+                    <h4>Étape ${index + 1}</h4>
+                    <p>${step}</p>
+                </div>
+            `;
+        });
+    } else {
+        stepsHTML += '<p>Aucune instruction disponible.</p>';
+    }
+
+    // Injection dans le HTML
+    content.innerHTML = `
+        <img src="${recipe.img}" class="modal-header-img" alt="${recipe.title}">
+        <div class="modal-body">
+            <h2>${recipe.title}</h2>
+            ${ingredientsHTML}
+            ${stepsHTML}
+        </div>
+    `;
+
+    // Affichage de la fenêtre
+    modal.classList.add('show');
+
+    // Gestion de la fermeture
+    document.getElementById('close-modal').onclick = () => {
+        modal.classList.remove('show');
+    };
 }

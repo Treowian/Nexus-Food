@@ -12,9 +12,8 @@ async function fetchRecipes() {
     return data;
 }
 
-// L'algorithme devient asynchrone (async)
+// Dans js/database.js
 export async function getRecommendations(userStock) {
-    // On attend (await) que Supabase nous renvoie les recettes
     const recettesBDD = await fetchRecipes();
 
     const recettesCalculees = recettesBDD.map(recette => {
@@ -22,9 +21,10 @@ export async function getRecommendations(userStock) {
         let missingItems = [];
 
         recette.ingredients.forEach(ing => {
-            if (!userStock.has(ing)) {
+            // ⚠️ On regarde "ing.name" au lieu de "ing"
+            if (!userStock.has(ing.name)) {
                 missingCount++;
-                missingItems.push(ing);
+                missingItems.push(ing.name);
             }
         });
 
