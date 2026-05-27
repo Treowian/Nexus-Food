@@ -17,7 +17,7 @@ export async function initSwipe() {
     toutesLesRecettes = await getRecommendations(monFrigo);
 
     // Initialisation des écouteurs du moteur de recherche
-    initSearchEngine();
+    initSearchEngine(applyFiltersAndRender);
 
     // Premier affichage : on montre tout ('all' et texte vide '')
     applyFiltersAndRender('', 'all');
