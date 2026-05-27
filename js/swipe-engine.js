@@ -1,19 +1,20 @@
 // js/swipe-engine.js
 import { getStock } from './fridge.js';
 import { getRecommendations } from './database.js';
-import { addMissingItems } from './shopping.js'; // ⚠️ On importe notre nouvelle fonction
+import { addMissingItems } from './shopping.js';
 
 export async function initSwipe() {
     const stack = document.getElementById('card-stack');
-    stack.innerHTML = '<p style="text-align:center; margin-top:50px; color: var(--text-light);">Connexion au serveur...</p>'; 
+    if (!stack) return;
+    
+    stack.innerHTML = '<p style="text-align:center; margin-top:50px; color: var(--text-light);">Chargement des recettes...</p>'; 
 
     const monFrigo = getStock();
-    // ⚠️ Ajout du mot-clé "await" pour attendre la réponse de Supabase
     const recettesTriees = await getRecommendations(monFrigo);
 
-    stack.innerHTML = ''; // On efface le message de chargement
+    stack.innerHTML = ''; // Nettoyage de l'écran de chargement
 
-    if (recettesTriees.length === 0) {
+    if (!recettesTriees || recettesTriees.length === 0) {
         stack.innerHTML = '<p style="text-align:center; margin-top:50px;">Aucune recette trouvée.</p>';
         return;
     }
@@ -22,10 +23,9 @@ export async function initSwipe() {
         const card = document.createElement('article');
         card.className = 'recipe-card';
         
-        // ⚠️ ASTUCE ARCHITECTURE : On cache les ingrédients manquants dans l'élément HTML
-        // On utilise un séparateur "|" car une virgule pourrait faire partie du nom d'un ingrédient
-        card.dataset.missing = recipe.missingItems.join('|'); 
-        card.dataset.recipe = JSON.stringify(recipe);
+        // ⚠️ Encodage JSON strict pour éviter l'erreur [object Object]
+        card.dataset.missing = JSON.stringify(recipe.missingItems || []); 
+        card.dataset.recipe = JSON.stringify(recipe); 
         
         let badgeColor = recipe.missingCount === 0 ? '#2ed573' : 'var(--primary-color)';
         let badgeText = recipe.missingCount === 0 ? '✨ Prêt à cuisiner !' : `⚠️ ${recipe.missingCount} manquant(s)`;
@@ -77,14 +77,18 @@ function attachSwipeEvents() {
 
         const threshold = window.innerWidth * 0.25; 
 
-        // ⚠️ NOUVEAUTÉ : Détection du "Tap" (Clic simple)
+        // Détection du clic simple (Tap) pour ouvrir le mode Cuisson
         if (Math.abs(currentX) < 10 && Math.abs(currentY) < 10) {
-            const recipeData = JSON.parse(topCard.dataset.recipe);
-            openCookingMode(recipeData);
-            return; // On arrête là
+            try {
+                const recipeData = JSON.parse(topCard.dataset.recipe);
+                openCookingMode(recipeData);
+            } catch (err) {
+                console.error("Erreur de lecture de la recette :", err);
+            }
+            return; 
         }
 
-        // Sinon, c'est un swipe classique
+        // Gestion du Swipe Gauche/Droite
         if (currentX > threshold) {
             swipeCard(topCard, window.innerWidth, 'droite', topCard.dataset.missing);
         } else if (currentX < -threshold) {
@@ -95,21 +99,24 @@ function attachSwipeEvents() {
     });
 }
 
-function swipeCard(card, directionX, choix, missingData = "") {
+function swipeCard(card, directionX, choix, missingData = "[]") {
     card.style.transform = `translate(${directionX}px, 100px) rotate(${directionX * 0.1}deg)`;
     card.style.opacity = '0';
     
     setTimeout(() => {
         card.remove();
         
-        // ⚠️ Si l'utilisateur a swipé à droite (Validé)
         if(choix === 'droite') {
             import('./navigation.js').then(module => {
-                if (missingData) {
-                    // On découpe notre chaîne de caractères pour recréer le tableau d'ingrédients
-                    const missingArray = missingData.split('|').filter(item => item !== "");
-                    addMissingItems(missingArray); // Envoi aux courses
-                    module.showToast(`Recette validée ! ${missingArray.length} ingrédient(s) ajouté(s) aux courses 🛒`);
+                if (missingData && missingData !== "[]") {
+                    try {
+                        const missingArray = JSON.parse(missingData);
+                        addMissingItems(missingArray); 
+                        module.showToast(`Recette validée ! ${missingArray.length} ingrédient(s) ajouté(s) aux courses 🛒`);
+                    } catch (err) {
+                        console.error("Erreur parsing missingData:", err);
+                        module.showToast("Recette validée ! (Erreur d'ajout aux courses)");
+                    }
                 } else {
                     module.showToast("Recette validée ! Ton frigo contient déjà tout ✨");
                 }
@@ -120,24 +127,26 @@ function swipeCard(card, directionX, choix, missingData = "") {
     }, 300);
 }
 
-// Affiche la vue détaillée de la recette
+// Fonction d'affichage du Modal de cuisson
 function openCookingMode(recipe) {
     const modal = document.getElementById('recipe-modal');
     const content = document.getElementById('modal-content');
     
-    // Génération de la liste des ingrédients avec les QUANTITÉS
+    if (!modal || !content) return;
+
     let ingredientsHTML = '<h3>Ingrédients</h3><div style="margin-bottom: 24px;">';
-    recipe.ingredients.forEach(ing => {
-        ingredientsHTML += `
-            <div class="ingredient-line">
-                <span>${ing.name}</span>
-                <span class="ingredient-qty">${ing.qty}</span>
-            </div>
-        `;
-    });
+    if (recipe.ingredients && recipe.ingredients.length > 0) {
+        recipe.ingredients.forEach(ing => {
+            ingredientsHTML += `
+                <div class="ingredient-line">
+                    <span>${ing.name}</span>
+                    <span class="ingredient-qty">${ing.qty || '1'}</span>
+                </div>
+            `;
+        });
+    }
     ingredientsHTML += '</div>';
 
-    // Génération des étapes de préparation
     let stepsHTML = '<h3>Préparation</h3>';
     if (recipe.steps && recipe.steps.length > 0) {
         recipe.steps.forEach((step, index) => {
@@ -152,7 +161,6 @@ function openCookingMode(recipe) {
         stepsHTML += '<p>Aucune instruction disponible.</p>';
     }
 
-    // Injection dans le HTML
     content.innerHTML = `
         <img src="${recipe.img}" class="modal-header-img" alt="${recipe.title}">
         <div class="modal-body">
@@ -162,10 +170,8 @@ function openCookingMode(recipe) {
         </div>
     `;
 
-    // Affichage de la fenêtre
     modal.classList.add('show');
 
-    // Gestion de la fermeture
     document.getElementById('close-modal').onclick = () => {
         modal.classList.remove('show');
     };
