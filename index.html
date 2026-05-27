@@ -33,8 +33,9 @@
             </header>
             
             <section class="content-area">
-                <div class="search-container">
-                    <input type="text" id="ingredient-search" placeholder="🔍 Ajouter un ingrédient...">
+                <div class="search-container" style="display: flex; gap: 8px;">
+                    <input type="text" id="ingredient-search" placeholder="🔍 Ingrédient..." style="flex: 2;">
+                    <input type="text" id="ingredient-qty" placeholder="Qté (ex: 2, 500g)" style="flex: 1; max-width: 110px; text-align: center;">
                 </div>
 
                 <div class="fridge-section">
@@ -59,8 +60,9 @@
             </header>
             
             <section class="content-area">
-                <div class="search-container">
-                    <input type="text" id="shopping-input" placeholder="🛒 Ajouter à la liste (Entrée)...">
+                <div class="search-container" style="display: flex; gap: 8px;">
+                    <input type="text" id="shopping-input" placeholder="🛒 Ajouter (Entrée)..." style="flex: 2;">
+                    <input type="text" id="shopping-qty" placeholder="Qté" style="flex: 1; max-width: 80px; text-align: center;">
                 </div>
 
                 <div class="shopping-list-container">
@@ -98,6 +100,6 @@
         <div id="modal-content">
             </div>
     </div>
-    
+
 </body>
 </html>

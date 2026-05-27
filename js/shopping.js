@@ -9,27 +9,28 @@ export async function initShopping() {
     await loadShoppingFromDB();
 
     const input = document.getElementById('shopping-input');
+    const qtyInput = document.getElementById('shopping-qty');
+
     input.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && input.value.trim() !== '') {
-            addItem(input.value.trim());
+            const qty = qtyInput.value.trim() || '1';
+            addItem(input.value.trim(), qty);
             input.value = ''; 
+            qtyInput.value = '';
         }
     });
 
-    // 🧹 Le bouton balai devient intelligent
     document.getElementById('btn-clear-purchased').addEventListener('click', async () => {
         const checkedItems = shoppingItems.filter(item => item.checked);
         
         if (checkedItems.length > 0) {
-            // ⚠️ NOUVEAUTÉ : On isole UNIQUEMENT les articles destinés au frigo
-            const foodItems = checkedItems.filter(item => item.is_food).map(item => item.name);
+            // ⚠️ On extrait le NOM et la QUANTITÉ pour les envoyer au frigo
+            const foodItems = checkedItems.filter(item => item.is_food).map(item => ({ name: item.name, qty: item.qty }));
             
-            // On envoie au frigo seulement s'il y a de la nourriture
             if (foodItems.length > 0) {
                 await addItemsToFridge(foodItems);
             }
             
-            // On supprime TOUT le caddie (nourriture + déodorant)
             const allCheckedNames = checkedItems.map(item => item.name);
             await supabase.from('shopping_list').delete().in('name', allCheckedNames);
 
@@ -39,7 +40,7 @@ export async function initShopping() {
             if (foodItems.length > 0) {
                 showToast(`${foodItems.length} article(s) transféré(s) au Frigo ! ❄️`);
             } else {
-                showToast("Caddie vidé ! (Aucun article pour le frigo) 🧹");
+                showToast("Caddie vidé ! 🧹");
             }
         } else {
             showToast("Le caddie est déjà vide !");
@@ -55,7 +56,7 @@ async function loadShoppingFromDB() {
     }
 }
 
-async function addItem(name) {
+async function addItem(name, qty) {
     const formattedName = name.charAt(0).toUpperCase() + name.slice(1);
     
     if (shoppingItems.some(item => item.name.toLowerCase() === formattedName.toLowerCase())) {
@@ -63,32 +64,26 @@ async function addItem(name) {
         return;
     }
 
-    const newItem = {
-        name: formattedName,
-        checked: false,
-        is_food: false // ⚠️ Ajout manuel = Faux par défaut (ex: Déodorant)
-    };
-
+    const newItem = { name: formattedName, checked: false, is_food: false, qty: qty };
     shoppingItems.unshift(newItem);
     renderShoppingList();
-    showToast("Ajouté aux courses");
 
     await supabase.from('shopping_list').insert([newItem]);
     await loadShoppingFromDB();
 }
 
-export async function addMissingItems(itemsArray) {
-    if (!itemsArray || itemsArray.length === 0) return;
+// Reçoit les manquants sous forme d'objets [{name, qty}] depuis le Swipe
+export async function addMissingItems(itemsObjectsArray) {
+    if (!itemsObjectsArray || itemsObjectsArray.length === 0) return;
 
     const newRows = [];
     
-    itemsArray.forEach(name => {
-        const formattedName = name.charAt(0).toUpperCase() + name.slice(1);
+    itemsObjectsArray.forEach(item => {
+        const formattedName = item.name.charAt(0).toUpperCase() + item.name.slice(1);
         const alreadyExists = shoppingItems.find(i => i.name.toLowerCase() === formattedName.toLowerCase());
         
         if (!alreadyExists) {
-            // ⚠️ Depuis une recette = Vrai par défaut (Nourriture)
-            const newItem = { name: formattedName, checked: false, is_food: true };
+            const newItem = { name: formattedName, checked: false, is_food: true, qty: item.qty };
             shoppingItems.unshift(newItem);
             newRows.push(newItem);
         }
@@ -110,7 +105,6 @@ window.toggleShoppingItem = async function(id) {
     }
 }
 
-// ⚠️ NOUVEAUTÉ : Fonction pour basculer le mode "Frigo" manuellement
 window.toggleFoodDest = async function(id) {
     const item = shoppingItems.find(i => i.id === id);
     if (item) {
@@ -140,14 +134,15 @@ function renderShoppingList() {
         const li = document.createElement('li');
         li.className = `shopping-item ${item.checked ? 'checked' : ''}`;
         
-        // ⚠️ NOUVEAUTÉ : Injection du bouton flocon de neige
+        // ⚠️ Modification UX : On affiche la quantité à côté du nom avec un petit badge gris épuré
         li.innerHTML = `
             <div class="item-left" onclick="toggleShoppingItem('${item.id}')">
                 <div class="checkbox">✓</div>
                 <span class="item-name">${item.name}</span>
+                <span style="background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 6px; font-size: 0.8rem; color: var(--text-light); font-weight: bold; margin-left: 4px;">${item.qty || '1'}</span>
             </div>
             <div style="display: flex; align-items: center;">
-                <span class="fridge-toggle ${item.is_food ? 'active' : ''}" onclick="toggleFoodDest('${item.id}')" title="Transférer au frigo">❄️</span>
+                <span class="fridge-toggle ${item.is_food ? 'active' : ''}" onclick="toggleFoodDest('${item.id}')">❄️</span>
                 <button class="btn-delete" onclick="deleteShoppingItem('${item.id}')">×</button>
             </div>
         `;

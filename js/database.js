@@ -21,10 +21,10 @@ export async function getRecommendations(userStock) {
         let missingItems = [];
 
         recette.ingredients.forEach(ing => {
-            // ⚠️ On regarde "ing.name" au lieu de "ing"
             if (!userStock.has(ing.name)) {
                 missingCount++;
-                missingItems.push(ing.name);
+                // ⚠️ On stocke maintenant l'objet ingrédient complet (nom + qté)
+                missingItems.push({ name: ing.name, qty: ing.qty });
             }
         });
 

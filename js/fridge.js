@@ -2,74 +2,80 @@
 import { supabase } from './supabase.js';
 
 const essentiels = ["Tomate", "Œuf", "Pâtes", "Oignon", "Ail", "Crème fraîche", "Beurre", "Fromage râpé", "Poulet"];
-let monStock = new Set(); 
+let monStock = new Map(); // ⚠️ Set() devient Map() pour stocker [Nom -> Qté]
 
 export async function initFridge() {
-    // 1. On charge le vrai stock depuis Supabase au démarrage
     await loadStockFromDB();
-    
     renderEssentiels();
     
     const searchInput = document.getElementById('ingredient-search');
-    searchInput.addEventListener('keypress', (e) => {
+    const qtyInput = document.getElementById('ingredient-qty');
+
+    // Événement sur la touche Entrée
+    searchInput.addEventListener('keypress', async (e) => {
         if (e.key === 'Enter' && searchInput.value.trim() !== '') {
-            toggleIngredient(searchInput.value.trim());
+            const qte = qtyInput.value.trim() || '1';
+            await addOrUpdateIngredient(searchInput.value.trim(), qte);
             searchInput.value = ''; 
+            qtyInput.value = '';
         }
     });
 }
 
-// Va chercher les ingrédients sauvegardés
 async function loadStockFromDB() {
-    const { data, error } = await supabase.from('fridge').select('name');
+    const { data, error } = await supabase.from('fridge').select('name, qty');
     if (!error && data) {
         monStock.clear();
-        data.forEach(item => monStock.add(item.name));
+        // On remplit la Map avec le nom et la quantité
+        data.forEach(item => monStock.set(item.name, item.qty || '1'));
         renderStock();
     }
 }
 
-// Gère le clic (Ajout/Suppression)
-async function toggleIngredient(ingredient) {
-    // Formatage propre : "tomate" -> "Tomate"
+// Ajoute ou met à jour un ingrédient avec sa quantité
+async function addOrUpdateIngredient(ingredient, qty) {
     const formattedItem = ingredient.charAt(0).toUpperCase() + ingredient.slice(1);
     
-    if (monStock.has(formattedItem)) {
-        // 1. Mise à jour immédiate de l'interface (Optimistic UI)
-        monStock.delete(formattedItem);
-        updateUI();
-        // 2. Suppression en base de données en arrière-plan
-        await supabase.from('fridge').delete().eq('name', formattedItem);
+    monStock.set(formattedItem, qty);
+    updateUI();
+
+    // Upsert (Insère, ou met à jour si le nom existe déjà)
+    await supabase.from('fridge').upsert([{ name: formattedItem, qty: qty }], { onConflict: 'name' });
+}
+
+// Supprime un ingrédient au clic sur sa bulle
+async function deleteIngredient(ingredient) {
+    monStock.delete(ingredient);
+    updateUI();
+    await supabase.from('fridge').delete().eq('name', ingredient);
+}
+
+// Fonction appelée par le bouton d'ajout rapide (les Essentiels)
+async function toggleEssentiel(ingredient) {
+    if (monStock.has(ingredient)) {
+        await deleteIngredient(ingredient);
     } else {
-        // 1. Mise à jour immédiate
-        monStock.add(formattedItem);
-        updateUI();
-        // 2. Sauvegarde en base de données
-        await supabase.from('fridge').insert([{ name: formattedItem }]);
+        await addOrUpdateIngredient(ingredient, '1');
     }
 }
 
-// Fonction utilisée par le bouton balai des courses
-export async function addItemsToFridge(itemsArray) {
-    const newItems = [];
+// Fonction publique utilisée par le bouton balai des courses
+export async function addItemsToFridge(itemsObjectsArray) {
+    const upsertRows = [];
     
-    itemsArray.forEach(item => {
-        const formattedItem = item.charAt(0).toUpperCase() + item.slice(1);
-        if (!monStock.has(formattedItem)) {
-            monStock.add(formattedItem);
-            newItems.push({ name: formattedItem }); // Prépare l'envoi groupé
-        }
+    itemsObjectsArray.forEach(item => {
+        const formattedItem = item.name.charAt(0).toUpperCase() + item.name.slice(1);
+        monStock.set(formattedItem, item.qty);
+        upsertRows.push({ name: formattedItem, qty: item.qty });
     });
     
     updateUI();
 
-    // Envoi de tous les nouveaux articles d'un coup à Supabase
-    if (newItems.length > 0) {
-        await supabase.from('fridge').insert(newItems);
+    if (upsertRows.length > 0) {
+        await supabase.from('fridge').upsert(upsertRows, { onConflict: 'name' });
     }
 }
 
-// Raccourci pour rafraîchir les deux listes
 function updateUI() {
     renderStock();
     renderEssentiels();
@@ -79,7 +85,6 @@ export function getStock() {
     return monStock;
 }
 
-/* --- FONCTIONS D'AFFICHAGE (Inchangées) --- */
 function renderEssentiels() {
     const container = document.getElementById('essential-tags');
     container.innerHTML = ''; 
@@ -88,8 +93,12 @@ function renderEssentiels() {
         const isActive = monStock.has(ingredient);
         const btn = document.createElement('button');
         btn.className = `ingredient-tag ${isActive ? 'active' : ''}`;
-        btn.innerText = (isActive ? '✓ ' : '+ ') + ingredient;
-        btn.addEventListener('click', () => toggleIngredient(ingredient));
+        
+        // Si présent, on affiche sa quantité dans la bulle d'aide
+        const qtyText = isActive ? ` (${monStock.get(ingredient)})` : '';
+        btn.innerText = (isActive ? '✓ ' : '+ ') + ingredient + qtyText;
+        
+        btn.addEventListener('click', () => toggleEssentiel(ingredient));
         container.appendChild(btn);
     });
 }
@@ -99,15 +108,15 @@ function renderStock() {
     container.innerHTML = '';
 
     if (monStock.size === 0) {
-        container.innerHTML = '<p class="empty-state">Ton frigo est vide. Ajoute des ingrédients !</p>';
+        container.innerHTML = '<p class="empty-state">Ton frigo est vide.</p>';
         return;
     }
 
-    monStock.forEach(ingredient => {
+    monStock.forEach((qty, ingredient) => {
         const btn = document.createElement('button');
         btn.className = 'ingredient-tag active';
-        btn.innerText = '✕ ' + ingredient;
-        btn.addEventListener('click', () => toggleIngredient(ingredient));
+        btn.innerText = `✕ ${ingredient} (${qty})`;
+        btn.addEventListener('click', () => deleteIngredient(ingredient));
         container.appendChild(btn);
     });
 }
