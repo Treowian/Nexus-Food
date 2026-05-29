@@ -71,32 +71,39 @@ function renderMenu() {
     });
 }
 
-// LE CALCULATEUR DE COURSES INTELLIGENT (Par Unité)
 window.generateShoppingList = async function() {
     if (myMenu.length === 0) {
         import('./navigation.js').then(m => m.showToast("Ton menu est vide !"));
         return;
     }
 
-    const monFrigo = getStock();
+    let monFrigo = getStock();
+    
+    // ⚠️ SÉCURITÉ 1 : Si le frigo est null ou indéfini, on force un tableau vide
+    if (!Array.isArray(monFrigo)) {
+        monFrigo = [];
+    }
+
     const allMissing = [];
 
     // On analyse les recettes du menu
     myMenu.forEach(item => {
         item.recipe.ingredients.forEach(ing => {
-            // L'ingrédient est-il déjà dans le frigo ?
-            const isInFridge = monFrigo.some(f => f.name.toLowerCase() === ing.name.toLowerCase());
+            
+            // ⚠️ SÉCURITÉ 2 : S'adapte au format de ton frigo (texte simple ou objet)
+            const isInFridge = monFrigo.some(f => {
+                const nomIngredientDuFrigo = typeof f === 'string' ? f : (f.name || '');
+                return nomIngredientDuFrigo.toLowerCase() === ing.name.toLowerCase();
+            });
             
             if (!isInFridge) {
                 // S'il manque, on regarde s'il est déjà dans notre future liste de courses
                 const existing = allMissing.find(m => m.name.toLowerCase() === ing.name.toLowerCase());
                 
                 if (existing) {
-                    // S'il y est déjà, on ajoute +1 à la quantité (ex: 2 articles à acheter)
-                    existing.qty += 1;
+                    existing.qty += 1; // +1 article
                 } else {
-                    // Sinon on l'ajoute pour la première fois avec une quantité de 1
-                    allMissing.push({ name: ing.name, qty: 1 });
+                    allMissing.push({ name: ing.name, qty: 1 }); // 1er article
                 }
             }
         });
