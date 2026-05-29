@@ -3,7 +3,7 @@ import { getStock } from './fridge.js';
 import { getRecommendations } from './database.js';
 import { addMissingItems } from './shopping.js';
 
-// 1. Définition de l'arbre de décision (Dictionnaire d'affinement)
+// Dictionnaire d'affinement
 const categoriesTree = {
     "plat": {
         label: "Plat Principal",
@@ -49,11 +49,10 @@ const categoriesTree = {
     }
 };
 
-let toutesLesRecettes = []; // Cache global des recommandations triées par le frigo
-let activeMainCat = '';     // Stocke la catégorie principale choisie (ex: 'plat')
+let toutesLesRecettes = []; 
+let activeMainCat = '';     
 
 export async function initSwipe() {
-    // Éléments HTML
     const step1Container = document.getElementById('step-1-container');
     const step2Container = document.getElementById('step-2-container');
     const step3Container = document.getElementById('step-3-container');
@@ -65,11 +64,13 @@ export async function initSwipe() {
 
     if (!step1Container) return;
 
-    // Chargement initial et tri en arrière-plan selon le vrai frigo
+    if (step2Container) step2Container.style.display = 'none';
+    if (step3Container) step3Container.style.display = 'none';
+    if (step1Container) step1Container.style.display = 'flex';
+
     const monFrigo = getStock();
     toutesLesRecettes = await getRecommendations(monFrigo);
 
-    // Événement Étape 1 : Clic sur une grosse bulle d'envie
     circleButtons.forEach(btn => {
         btn.onclick = () => {
             activeMainCat = btn.dataset.cat;
@@ -77,12 +78,10 @@ export async function initSwipe() {
         };
     });
 
-    // Événement Étape 1 : Bouton "Tout voir"
     if (btnSkip) {
         btnSkip.onclick = () => launchSwipeSession('all', 'all', 'Toutes', 'Recettes');
     }
 
-    // Événement Étape 2 : Bouton retour vers l'étape 1
     if (btnBackTo1) {
         btnBackTo1.onclick = () => {
             step2Container.style.display = 'none';
@@ -90,7 +89,6 @@ export async function initSwipe() {
         };
     }
 
-    // Événement Étape 3 : Bouton croix pour réinitialiser tout le parcours
     if (btnReset) {
         btnReset.onclick = () => {
             step3Container.style.display = 'none';
@@ -100,7 +98,6 @@ export async function initSwipe() {
     }
 }
 
-// Ouvre l'étape 2 et génère les lignes d'affinement dynamiquement
 function openStep2(catId) {
     const step1Container = document.getElementById('step-1-container');
     const step2Container = document.getElementById('step-2-container');
@@ -110,17 +107,14 @@ function openStep2(catId) {
     const catData = categoriesTree[catId];
     if (!catData) return;
 
-    // Mise à jour du titre
     step2Title.innerText = `${catData.label}... plutôt ?`;
-    step2List.innerHTML = ''; // Nettoyage de la liste précédente
+    step2List.innerHTML = ''; 
 
-    // Injection dynamique des sous-catégories définies dans le dictionnaire
     catData.subs.forEach(sub => {
         const btn = document.createElement('button');
         btn.className = 'sub-row-btn';
         btn.innerHTML = `<span>${sub.label}</span><span class="sub-row-arrow">➔</span>`;
         
-        // Au clic, on déclenche le filtrage final et la session de swipe !
         btn.onclick = () => {
             launchSwipeSession(catId, sub.id, catData.label, sub.label.split(' ').slice(1).join(' '));
         };
@@ -128,32 +122,25 @@ function openStep2(catId) {
         step2List.appendChild(btn);
     });
 
-    // Animation visuelle (changement de calque)
     step1Container.style.display = 'none';
     step2Container.style.display = 'flex';
 }
 
-// Étape 3 : Filtre et affiche la pile de cartes finale
 function launchSwipeSession(mainTag, subTag, mainLabel, subLabel) {
     document.getElementById('step-1-container').style.display = 'none';
     document.getElementById('step-2-container').style.display = 'none';
     document.getElementById('step-3-container').style.display = 'flex';
 
-    // Mise à jour du fil d'Ariane (breadcrumbs)
     document.getElementById('crumb-main').innerText = mainLabel;
     document.getElementById('crumb-sub').innerText = subLabel;
 
     const stack = document.getElementById('card-stack');
-    stack.innerHTML = ''; // Nettoyage
+    stack.innerHTML = ''; 
 
-    // 🧠 LE FILTRAGE MAGIQUE MULTI-NIVEAU
     const recettesFiltrees = toutesLesRecettes.filter(recipe => {
-        if (mainTag === 'all') return true; // Cas du bouton "Tout voir"
-        
-        // La recette doit contenir le tag principal ET le sous-tag
+        if (mainTag === 'all') return true; 
         const containsMain = recipe.tags && recipe.tags.includes(mainTag);
         const containsSub = recipe.tags && recipe.tags.includes(subTag);
-        
         return containsMain && containsSub;
     });
 
@@ -162,7 +149,6 @@ function launchSwipeSession(mainTag, subTag, mainLabel, subLabel) {
         return;
     }
 
-    // Affichage physique des cartes filtrées
     recettesFiltrees.reverse().forEach(recipe => {
         const card = document.createElement('article');
         card.className = 'recipe-card';
@@ -188,4 +174,139 @@ function launchSwipeSession(mainTag, subTag, mainLabel, subLabel) {
     attachSwipeEvents();
 }
 
-// ... CONSERVE STRICTEMENT LE RESTE DE TON FICHIER (attachSwipeEvents, swipeCard, openCookingMode) ...
+function attachSwipeEvents() {
+    const cards = document.querySelectorAll('.recipe-card');
+    if (cards.length === 0) return;
+
+    cards.forEach(card => {
+        let startX = 0;
+        let startY = 0;
+        let isDragging = false;
+
+        card.addEventListener('mousedown', startDrag);
+        card.addEventListener('touchstart', startDrag, {passive: true});
+
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('touchmove', drag, {passive: false});
+
+        document.addEventListener('mouseup', endDrag);
+        document.addEventListener('touchend', endDrag);
+
+        function startDrag(e) {
+            if (e.target.closest('button')) return; // Ignore clics sur boutons
+            isDragging = true;
+            startX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+            startY = e.type.includes('mouse') ? e.pageY : e.touches[0].pageY;
+            card.style.transition = 'none';
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+            const currentX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+            const currentY = e.type.includes('mouse') ? e.pageY : e.touches[0].pageY;
+            const deltaX = currentX - startX;
+            const deltaY = currentY - startY;
+            
+            // Rotation légère pendant le swipe
+            const rotate = deltaX * 0.05;
+            card.style.transform = `translate(${deltaX}px, ${deltaY}px) rotate(${rotate}deg)`;
+            
+            // Empêcher le scroll vertical de la page si on swipe horizontalement
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                e.preventDefault();
+            }
+        }
+
+        function endDrag(e) {
+            if (!isDragging) return;
+            isDragging = false;
+            
+            const currentX = e.type.includes('mouse') ? e.pageX : (e.changedTouches ? e.changedTouches[0].pageX : startX);
+            const deltaX = currentX - startX;
+
+            card.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+            
+            if (deltaX > 100) {
+                // Swipe Droit
+                card.style.transform = `translate(${window.innerWidth}px, 0) rotate(20deg)`;
+                card.style.opacity = '0';
+                setTimeout(() => swipeCard(card, 'droite'), 300);
+            } else if (deltaX < -100) {
+                // Swipe Gauche
+                card.style.transform = `translate(-${window.innerWidth}px, 0) rotate(-20deg)`;
+                card.style.opacity = '0';
+                setTimeout(() => swipeCard(card, 'gauche'), 300);
+            } else {
+                // Retour au centre (si click ou pas assez swipé)
+                card.style.transform = 'translate(0px, 0px) rotate(0deg)';
+                if (Math.abs(deltaX) < 10) {
+                    const recipeData = JSON.parse(card.dataset.recipe);
+                    openCookingMode(recipeData);
+                }
+            }
+        }
+    });
+}
+
+function swipeCard(card, choix) {
+    card.remove();
+    
+    if(choix === 'droite') {
+        import('./navigation.js').then(module => {
+            module.showToast("Recette ajoutée au Menu 📅");
+        });
+        
+        import('./menu.js').then(menuModule => {
+            const recipeData = JSON.parse(card.dataset.recipe);
+            menuModule.addToMenu(recipeData);
+        });
+    }
+}
+
+export function openCookingMode(recipe) {
+    const modal = document.getElementById('recipe-modal');
+    const content = document.getElementById('modal-content');
+    
+    if (!modal || !content) return;
+
+    let ingredientsHTML = '';
+    if(recipe.ingredients && recipe.ingredients.length > 0) {
+        recipe.ingredients.forEach(ing => {
+            ingredientsHTML += `<li>${ing.name} ${ing.qty ? `<span style="color:var(--text-light)">(${ing.qty})</span>` : ''}</li>`;
+        });
+    }
+
+    let stepsHTML = '';
+    if(recipe.steps && recipe.steps.length > 0) {
+        recipe.steps.forEach((step, index) => {
+            stepsHTML += `<p><strong>Étape ${index + 1} :</strong> ${step}</p>`;
+        });
+    }
+
+    content.innerHTML = `
+        <img src="${recipe.img}" alt="${recipe.title}" style="width:100%; height:250px; object-fit:cover; border-radius:12px 12px 0 0;">
+        <div style="padding:20px;">
+            <h2 style="margin-top:0; color:var(--text-color);">${recipe.title}</h2>
+            <div style="margin-bottom:20px;">
+                <span style="background:var(--bg-color); padding:6px 12px; border-radius:16px; font-size:0.9rem; font-weight:bold;">⏳ ${recipe.time}</span>
+            </div>
+            
+            <h3 style="color:var(--primary-color);">Ingrédients</h3>
+            <ul style="padding-left:20px; line-height:1.6; color:var(--text-color);">
+                ${ingredientsHTML}
+            </ul>
+
+            <h3 style="color:var(--primary-color); margin-top:24px;">Préparation</h3>
+            <div style="line-height:1.6; color:var(--text-color);">
+                ${stepsHTML}
+            </div>
+        </div>
+    `;
+
+    modal.classList.add('show');
+
+    const btnClose = document.getElementById('close-modal');
+    btnClose.onclick = () => {
+        modal.classList.remove('show');
+    };
+}

@@ -10,7 +10,7 @@
     <link rel="icon" type="image/png" href="assets/icon.png">
     
     <link rel="stylesheet" href="./css/variables.css">
-<link rel="stylesheet" href="./css/main.css">
+    <link rel="stylesheet" href="./css/main.css">
 </head>
 <body>
 
@@ -68,7 +68,25 @@
                 <div class="card-stack" id="card-stack">
                     </div>
             </div>
+        </main>
 
+        <main id="view-menu" class="view">
+            <header class="top-bar">
+                <h1>Mon Menu</h1>
+            </header>
+            
+            <section class="content-area" style="display: flex; flex-direction: column; height: 100%;">
+                
+                <div id="menu-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; margin-top: 10px; padding-bottom: 20px;">
+                    </div>
+                
+                <div style="padding: 16px 0; margin-bottom: 20px; border-top: 1px solid var(--line-color);">
+                    <button onclick="generateShoppingList()" style="width: 100%; padding: 14px; border-radius: 12px; background: var(--primary-color); color: white; font-size: 1.1rem; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 71, 87, 0.3);">
+                        🛒 Générer ma liste de courses
+                    </button>
+                </div>
+                
+            </section>
         </main>
 
         <main id="view-fridge" class="view">
@@ -125,6 +143,10 @@
                 <span class="icon">🍽️</span>
                 <span class="label">Recettes</span>
             </button>
+            <button class="nav-item" data-target="view-menu">
+                <span class="icon">📅</span>
+                <span class="label">Menu</span>
+            </button>
             <button class="nav-item" data-target="view-fridge">
                 <span class="icon">❄️</span>
                 <span class="label">Frigo</span>
@@ -136,14 +158,13 @@
         </nav>
     </div>
 
-    <script src="js/app.js" type="module"></script>
-    <script src="js/navigation.js" type="module"></script>
-
     <div id="recipe-modal" class="modal-hidden">
         <button id="close-modal" class="icon-btn">✕</button>
         <div id="modal-content">
             </div>
     </div>
 
+    <script src="js/app.js" type="module"></script>
+    <script src="js/navigation.js" type="module"></script>
 </body>
 </html>
