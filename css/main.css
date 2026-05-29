@@ -559,27 +559,30 @@
 .swipe-navigation-bar {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start; /* Aligne en haut si le texte passe sur 2 lignes */
     width: 100%;
-    padding: 12px 16px;
+    padding: 16px;
     position: absolute;
     top: 0;
     left: 0;
     z-index: 100;
     box-sizing: border-box;
+    gap: 12px; /* Garde toujours un espace entre le texte et la croix */
 }
 
 .breadcrumbs {
     display: flex;
+    flex-wrap: wrap; /* Permet au texte de passer à la ligne si besoin */
     align-items: center;
     gap: 6px;
     font-size: 0.85rem;
     font-weight: bold;
     color: var(--text-light);
     background: var(--card-bg);
-    padding: 6px 14px;
+    padding: 8px 16px;
     border-radius: 20px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    flex: 1; /* Dit au texte de prendre tout l'espace disponible, mais pas plus */
 }
 
 .crumb-separator {
@@ -592,16 +595,22 @@
 }
 
 .btn-close-funnel {
-    background: var(--card-bg);
+    flex-shrink: 0; /* Interdit formellement d'écraser la taille de ce bouton */
+    background: rgba(0, 0, 0, 0.5); /* Un gris foncé élégant */
+    color: white; /* La croix en blanc */
     border: none;
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
-    font-weight: bold;
-    cursor: pointer;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    font-size: 1.1rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--text-light);
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+
+.btn-close-funnel:active {
+    transform: scale(0.9);
 }
