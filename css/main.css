@@ -297,19 +297,20 @@
 
 /* --- LE MODAL DE CUISSON --- */
 #recipe-modal {
-    display: none; /* ⚠️ CRUCIAL : Cache complètement tout le bloc par défaut */
+    display: none; 
     position: fixed;
     top: 0; 
     left: 0; 
     width: 100%; 
     height: 100%;
-    background: var(--bg-color); /* Ou un fond semi-transparent selon ton design */
-    z-index: 1000; /* Assure qu'il passe au-dessus de tout QUAND il est ouvert */
+    background: var(--bg-color);
+    z-index: 1000;
+    pointer-events: none; /* ⚠️ LAISSE PASSER LES CLICS */
 }
 
-/* La classe ajoutée par le JavaScript (modal.classList.add('show')) */
 #recipe-modal.show {
-    display: block; /* Fait apparaître le modal et son bouton fermer */
+    display: block; 
+    pointer-events: auto; /* ⚠️ REBLOQUE LES CLICS QUAND IL EST OUVERT */
 }
 
 /* Le fameux bouton coupable */
