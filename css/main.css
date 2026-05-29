@@ -295,37 +295,40 @@
     opacity: 1; /* Allumé (Ira au frigo) */
 }
 
-/* --- MODE CUISSON (Modal) --- */
+/* --- LE MODAL DE CUISSON --- */
 #recipe-modal {
+    display: none; /* ⚠️ CRUCIAL : Cache complètement tout le bloc par défaut */
     position: fixed;
-    top: 100%; /* Caché hors de l'écran en bas */
-    left: 0;
-    width: 100%;
-    height: 100dvh;
-    background: var(--bg-color);
-    z-index: 3000;
-    transition: top 0.3s cubic-bezier(0.175, 0.885, 0.32, 1);
-    overflow-y: auto;
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%;
+    background: var(--bg-color); /* Ou un fond semi-transparent selon ton design */
+    z-index: 1000; /* Assure qu'il passe au-dessus de tout QUAND il est ouvert */
 }
 
+/* La classe ajoutée par le JavaScript (modal.classList.add('show')) */
 #recipe-modal.show {
-    top: 0; /* Glisse vers le haut */
+    display: block; /* Fait apparaître le modal et son bouton fermer */
 }
 
-#close-modal {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: rgba(0,0,0,0.5);
+/* Le fameux bouton coupable */
+#close-modal.icon-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(0, 0, 0, 0.5);
     color: white;
+    border: none;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
-    width: 40px;
-    height: 40px;
+    font-size: 1.1rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 3001;
-    backdrop-filter: blur(5px);
+    cursor: pointer;
+    z-index: 1001; /* Reste au-dessus du contenu du modal */
 }
 
 .modal-header-img {
