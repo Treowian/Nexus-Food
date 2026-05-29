@@ -88,21 +88,31 @@
 /* --- PILE DE CARTES (Le "Tinder") --- */
 #card-stack {
     flex: 1;
+    width: 100%; /* ⚠️ CRUCIAL : Force la largeur au max pour casser l'étau */
     position: relative;
-    margin: calc(var(--spacing-base) * 2);
+    margin-top: 70px; /* Laisse respirer la barre de navigation (Menu/Croix) */
+    margin-bottom: 20px;
     touch-action: none; /* Bloque le scroll pendant le swipe */
 }
 
 .recipe-card {
     position: absolute;
+    /* On centre la carte parfaitement dans l'espace disponible */
     top: 0;
+    bottom: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+    right: 0;
+    margin: auto; 
+    
+    width: 90%; /* Garde une petite marge sur les côtés de l'écran */
+    height: 90%; 
+    max-width: 380px; /* Empêche la carte d'être géante sur une tablette */
+    max-height: 600px;
+    
     background: var(--card-bg);
     border-radius: 24px;
     overflow: hidden;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
     will-change: transform; 
     transform-origin: 50% 100%; 
 }

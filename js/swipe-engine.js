@@ -71,6 +71,8 @@ export async function initSwipe() {
     const monFrigo = getStock();
     toutesLesRecettes = await getRecommendations(monFrigo);
 
+    console.log("Données reçues de Supabase :", toutesLesRecettes);
+
     circleButtons.forEach(btn => {
         btn.onclick = () => {
             activeMainCat = btn.dataset.cat;
