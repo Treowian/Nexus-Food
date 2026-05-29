@@ -4,7 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Nexus Food</title>
-    
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            alert("🚨 Erreur JS : \n" + message + "\nLigne : " + lineno);
+            return true;
+        };
+    </script>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff4757">
     <link rel="icon" type="image/png" href="assets/icon.png">
@@ -17,7 +22,6 @@
     <div id="toast" class="toast-hidden">🔔 <span id="toast-msg">Action confirmée</span></div>
 
     <div id="app">
-        <main id="view-recipes" class="view active">
         <main id="view-recipes" class="view active">
             
             <div id="step-1-container" class="funnel-stage">
