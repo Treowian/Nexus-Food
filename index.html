@@ -18,21 +18,57 @@
 
     <div id="app">
         <main id="view-recipes" class="view active">
-          <main id="view-recipes" class="view active">
             
-            <div class="search-header">
-                <input type="text" id="recipe-search-input" placeholder="🔍 Rechercher (ex: Pâtes, Poulet)...">
-                <div class="filter-tags" id="recipe-filters">
-                    <button class="filter-tag active" data-tag="all">Tout</button>
-                    <button class="filter-tag" data-tag="végétarien">🥬 Végétarien</button>
-                    <button class="filter-tag" data-tag="italien">🍝 Italien</button>
-                    <button class="filter-tag" data-tag="express">⏱️ Express</button>
-                    <button class="filter-tag" data-tag="healthy">🥗 Healthy</button>
+            <div id="step-1-container" class="funnel-stage">
+                <h2 class="funnel-title">De quoi as-tu envie ?</h2>
+                <div class="funnel-grid-circles">
+                    <button class="circle-btn" data-cat="plat">
+                        <span class="circle-icon">🍽️</span>
+                        <span class="circle-label">Plat Principal</span>
+                    </button>
+                    <button class="circle-btn" data-cat="apero">
+                        <span class="circle-icon">🥂</span>
+                        <span class="circle-label">Apéro & Entrée</span>
+                    </button>
+                    <button class="circle-btn" data-cat="sucre">
+                        <span class="circle-icon">🍰</span>
+                        <span class="circle-label">Dessert & Goûter</span>
+                    </button>
+                    <button class="circle-btn" data-cat="healthy">
+                        <span class="circle-icon">🥗</span>
+                        <span class="circle-label">Healthy & Léger</span>
+                    </button>
+                    <button class="circle-btn" data-cat="express">
+                        <span class="circle-icon">⏱️</span>
+                        <span class="circle-label">Express (Flemme)</span>
+                    </button>
                 </div>
+                <button id="btn-skip-to-all" class="btn-link">Passer, je veux tout voir</button>
             </div>
 
-            <div class="card-stack" id="card-stack">
+            <div id="step-2-container" class="funnel-stage" style="display: none;">
+                <div class="funnel-header">
+                    <button id="btn-back-to-1" class="btn-icon-back">←</button>
+                    <h2 id="step-2-title" class="funnel-title-sub">Plat Principal... plutôt ?</h2>
                 </div>
+                <div id="step-2-list" class="subcategories-list">
+                    </div>
+            </div>
+
+            <div id="step-3-container" class="funnel-stage" style="display: none;">
+                <div class="swipe-navigation-bar">
+                    <div class="breadcrumbs">
+                        <span id="crumb-main">Plat</span>
+                        <span class="crumb-separator">➔</span>
+                        <span id="crumb-sub" class="active">Chaud</span>
+                    </div>
+                    <button id="btn-reset-funnel" class="btn-close-funnel" title="Recommencer">✕</button>
+                </div>
+                
+                <div class="card-stack" id="card-stack">
+                    </div>
+            </div>
+
         </main>
 
         <main id="view-fridge" class="view">

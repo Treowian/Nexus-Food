@@ -1,53 +1,168 @@
 // js/swipe-engine.js
-// js/swipe-engine.js
 import { getStock } from './fridge.js';
 import { getRecommendations } from './database.js';
 import { addMissingItems } from './shopping.js';
-import { initSearchEngine } from './components/search-engine.js'; // Import du moteur
 
-let toutesLesRecettes = []; // Mémoire locale pour éviter de re-télécharger
+// 1. Définition de l'arbre de décision (Dictionnaire d'affinement)
+const categoriesTree = {
+    "plat": {
+        label: "Plat Principal",
+        subs: [
+            { id: "chaud", label: "🔥 Un bon plat chaud" },
+            { id: "froid", label: "❄️ Quelque chose de froid" },
+            { id: "viande", label: "🥩 Avec de la viande" },
+            { id: "poisson", label: "🐟 Côté mer / Poisson" },
+            { id: "végé", label: "🥦 100% Végétarien" }
+        ]
+    },
+    "apero": {
+        label: "Apéro & Entrée",
+        subs: [
+            { id: "partager", label: "🧀 Un truc à partager / Tapas" },
+            { id: "individuel", label: "🥄 Une entrée individuelle" },
+            { id: "boissons", label: "🍹 Boissons & Cocktails" }
+        ]
+    },
+    "sucre": {
+        label: "Dessert & Goûter",
+        subs: [
+            { id: "chocolat", label: "🍫 Tout chocolat" },
+            { id: "fruite", label: "🍓 Fruité & Léger" },
+            { id: "petitdej", label: "🥐 Brunch & Petit-déj" }
+        ]
+    },
+    "healthy": {
+        label: "Healthy & Léger",
+        subs: [
+            { id: "chaud", label: "🥣 Soupes & Bowls chauds" },
+            { id: "froid", label: "🥬 Grandes Salades fraîches" },
+            { id: "proteine", label: "💪 Assiettes Hyper-protéinées" }
+        ]
+    },
+    "express": {
+        label: "Express (La flemme)",
+        subs: [
+            { id: "sanscuisson", label: "🚫 Recettes sans cuisson" },
+            { id: "onepot", label: "🍳 One-Pot (Une seule poêle)" },
+            { id: "surlepouce", label: "🥪 Sandwichs & Sur le pouce" }
+        ]
+    }
+};
+
+let toutesLesRecettes = []; // Cache global des recommandations triées par le frigo
+let activeMainCat = '';     // Stocke la catégorie principale choisie (ex: 'plat')
 
 export async function initSwipe() {
-    const stack = document.getElementById('card-stack');
-    if (!stack) return;
+    // Éléments HTML
+    const step1Container = document.getElementById('step-1-container');
+    const step2Container = document.getElementById('step-2-container');
+    const step3Container = document.getElementById('step-3-container');
     
-    stack.innerHTML = '<p style="text-align:center; margin-top:50px; color: var(--text-light);">Recherche des meilleures recettes...</p>'; 
+    const circleButtons = document.querySelectorAll('.circle-btn');
+    const btnSkip = document.getElementById('btn-skip-to-all');
+    const btnBackTo1 = document.getElementById('btn-back-to-1');
+    const btnReset = document.getElementById('btn-reset-funnel');
 
+    if (!step1Container) return;
+
+    // Chargement initial et tri en arrière-plan selon le vrai frigo
     const monFrigo = getStock();
     toutesLesRecettes = await getRecommendations(monFrigo);
 
-    // Initialisation des écouteurs du moteur de recherche
-    initSearchEngine(applyFiltersAndRender);
-
-    // Premier affichage : on montre tout ('all' et texte vide '')
-    applyFiltersAndRender('', 'all');
-}
-
-// ⚠️ NOUVELLE FONCTION EXPORTÉE : Filtre et reconstruit les cartes
-export function applyFiltersAndRender(searchQuery, tag) {
-    const stack = document.getElementById('card-stack');
-    if (!stack) return;
-
-    // Le filtrage magique (Texte + Tag)
-    const recettesFiltrees = toutesLesRecettes.filter(recipe => {
-        const matchText = recipe.title.toLowerCase().includes(searchQuery);
-        
-        let matchTag = true;
-        if (tag !== 'all') {
-            matchTag = recipe.tags && recipe.tags.includes(tag);
-        }
-
-        return matchText && matchTag;
+    // Événement Étape 1 : Clic sur une grosse bulle d'envie
+    circleButtons.forEach(btn => {
+        btn.onclick = () => {
+            activeMainCat = btn.dataset.cat;
+            openStep2(activeMainCat);
+        };
     });
 
-    stack.innerHTML = ''; // On nettoie la table
+    // Événement Étape 1 : Bouton "Tout voir"
+    if (btnSkip) {
+        btnSkip.onclick = () => launchSwipeSession('all', 'all', 'Toutes', 'Recettes');
+    }
+
+    // Événement Étape 2 : Bouton retour vers l'étape 1
+    if (btnBackTo1) {
+        btnBackTo1.onclick = () => {
+            step2Container.style.display = 'none';
+            step1Container.style.display = 'flex';
+        };
+    }
+
+    // Événement Étape 3 : Bouton croix pour réinitialiser tout le parcours
+    if (btnReset) {
+        btnReset.onclick = () => {
+            step3Container.style.display = 'none';
+            step2Container.style.display = 'none';
+            step1Container.style.display = 'flex';
+        };
+    }
+}
+
+// Ouvre l'étape 2 et génère les lignes d'affinement dynamiquement
+function openStep2(catId) {
+    const step1Container = document.getElementById('step-1-container');
+    const step2Container = document.getElementById('step-2-container');
+    const step2Title = document.getElementById('step-2-title');
+    const step2List = document.getElementById('step-2-list');
+
+    const catData = categoriesTree[catId];
+    if (!catData) return;
+
+    // Mise à jour du titre
+    step2Title.innerText = `${catData.label}... plutôt ?`;
+    step2List.innerHTML = ''; // Nettoyage de la liste précédente
+
+    // Injection dynamique des sous-catégories définies dans le dictionnaire
+    catData.subs.forEach(sub => {
+        const btn = document.createElement('button');
+        btn.className = 'sub-row-btn';
+        btn.innerHTML = `<span>${sub.label}</span><span class="sub-row-arrow">➔</span>`;
+        
+        // Au clic, on déclenche le filtrage final et la session de swipe !
+        btn.onclick = () => {
+            launchSwipeSession(catId, sub.id, catData.label, sub.label.split(' ').slice(1).join(' '));
+        };
+        
+        step2List.appendChild(btn);
+    });
+
+    // Animation visuelle (changement de calque)
+    step1Container.style.display = 'none';
+    step2Container.style.display = 'flex';
+}
+
+// Étape 3 : Filtre et affiche la pile de cartes finale
+function launchSwipeSession(mainTag, subTag, mainLabel, subLabel) {
+    document.getElementById('step-1-container').style.display = 'none';
+    document.getElementById('step-2-container').style.display = 'none';
+    document.getElementById('step-3-container').style.display = 'flex';
+
+    // Mise à jour du fil d'Ariane (breadcrumbs)
+    document.getElementById('crumb-main').innerText = mainLabel;
+    document.getElementById('crumb-sub').innerText = subLabel;
+
+    const stack = document.getElementById('card-stack');
+    stack.innerHTML = ''; // Nettoyage
+
+    // 🧠 LE FILTRAGE MAGIQUE MULTI-NIVEAU
+    const recettesFiltrees = toutesLesRecettes.filter(recipe => {
+        if (mainTag === 'all') return true; // Cas du bouton "Tout voir"
+        
+        // La recette doit contenir le tag principal ET le sous-tag
+        const containsMain = recipe.tags && recipe.tags.includes(mainTag);
+        const containsSub = recipe.tags && recipe.tags.includes(subTag);
+        
+        return containsMain && containsSub;
+    });
 
     if (recettesFiltrees.length === 0) {
-        stack.innerHTML = '<p style="text-align:center; margin-top:50px;">Aucune recette ne correspond à ces critères.</p>';
+        stack.innerHTML = '<p style="text-align:center; margin-top:100px; color: var(--text-light); padding: 20px;">Aucune recette ne correspond exactement à cette combinaison pour le moment. 👨‍🍳</p>';
         return;
     }
 
-    // Reconstruction des cartes sur les recettes filtrées
+    // Affichage physique des cartes filtrées
     recettesFiltrees.reverse().forEach(recipe => {
         const card = document.createElement('article');
         card.className = 'recipe-card';
@@ -55,7 +170,7 @@ export function applyFiltersAndRender(searchQuery, tag) {
         card.dataset.recipe = JSON.stringify(recipe); 
         
         let badgeColor = recipe.missingCount === 0 ? '#2ed573' : 'var(--primary-color)';
-        let badgeText = recipe.missingCount === 0 ? '✨ Prêt à cuisiner !' : `⚠️ ${recipe.missingCount} manquant(s)`;
+        let badgeText = recipe.missingCount === 0 ? '✨ Prêt !' : `⚠️ ${recipe.missingCount} manquant(s)`;
 
         card.innerHTML = `
             <img src="${recipe.img}" alt="${recipe.title}" class="card-image" draggable="false">
@@ -73,133 +188,4 @@ export function applyFiltersAndRender(searchQuery, tag) {
     attachSwipeEvents();
 }
 
-function attachSwipeEvents() {
-    const cards = document.querySelectorAll('.recipe-card');
-    if (cards.length === 0) return;
-
-    const topCard = cards[cards.length - 1];
-
-    let startX = 0, startY = 0;
-    let currentX = 0, currentY = 0;
-    let isDragging = false;
-
-    topCard.addEventListener('touchstart', (e) => {
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        isDragging = true;
-        topCard.style.transition = 'none'; 
-    }, { passive: true });
-
-    topCard.addEventListener('touchmove', (e) => {
-        if (!isDragging) return;
-        currentX = e.touches[0].clientX - startX;
-        currentY = e.touches[0].clientY - startY;
-        const rotate = currentX * 0.05; 
-        topCard.style.transform = `translate(${currentX}px, ${currentY}px) rotate(${rotate}deg)`;
-    }, { passive: true });
-
-    topCard.addEventListener('touchend', () => {
-        isDragging = false;
-        topCard.style.transition = 'transform 0.3s ease-out'; 
-
-        const threshold = window.innerWidth * 0.25; 
-
-        // Détection du clic simple (Tap) pour ouvrir le mode Cuisson
-        if (Math.abs(currentX) < 10 && Math.abs(currentY) < 10) {
-            try {
-                const recipeData = JSON.parse(topCard.dataset.recipe);
-                openCookingMode(recipeData);
-            } catch (err) {
-                console.error("Erreur de lecture de la recette :", err);
-            }
-            return; 
-        }
-
-        // Gestion du Swipe Gauche/Droite
-        if (currentX > threshold) {
-            swipeCard(topCard, window.innerWidth, 'droite', topCard.dataset.missing);
-        } else if (currentX < -threshold) {
-            swipeCard(topCard, -window.innerWidth, 'gauche');
-        } else {
-            topCard.style.transform = `translate(0px, 0px) rotate(0deg)`;
-        }
-    });
-}
-
-function swipeCard(card, directionX, choix, missingData = "[]") {
-    card.style.transform = `translate(${directionX}px, 100px) rotate(${directionX * 0.1}deg)`;
-    card.style.opacity = '0';
-    
-    setTimeout(() => {
-        card.remove();
-        
-        if(choix === 'droite') {
-            import('./navigation.js').then(module => {
-                if (missingData && missingData !== "[]") {
-                    try {
-                        const missingArray = JSON.parse(missingData);
-                        addMissingItems(missingArray); 
-                        module.showToast(`Recette validée ! ${missingArray.length} ingrédient(s) ajouté(s) aux courses 🛒`);
-                    } catch (err) {
-                        console.error("Erreur parsing missingData:", err);
-                        module.showToast("Recette validée ! (Erreur d'ajout aux courses)");
-                    }
-                } else {
-                    module.showToast("Recette validée ! Ton frigo contient déjà tout ✨");
-                }
-            });
-        }
-        
-        attachSwipeEvents(); 
-    }, 300);
-}
-
-// Fonction d'affichage du Modal de cuisson
-function openCookingMode(recipe) {
-    const modal = document.getElementById('recipe-modal');
-    const content = document.getElementById('modal-content');
-    
-    if (!modal || !content) return;
-
-    let ingredientsHTML = '<h3>Ingrédients</h3><div style="margin-bottom: 24px;">';
-    if (recipe.ingredients && recipe.ingredients.length > 0) {
-        recipe.ingredients.forEach(ing => {
-            ingredientsHTML += `
-                <div class="ingredient-line">
-                    <span>${ing.name}</span>
-                    <span class="ingredient-qty">${ing.qty || '1'}</span>
-                </div>
-            `;
-        });
-    }
-    ingredientsHTML += '</div>';
-
-    let stepsHTML = '<h3>Préparation</h3>';
-    if (recipe.steps && recipe.steps.length > 0) {
-        recipe.steps.forEach((step, index) => {
-            stepsHTML += `
-                <div class="step-block">
-                    <h4>Étape ${index + 1}</h4>
-                    <p>${step}</p>
-                </div>
-            `;
-        });
-    } else {
-        stepsHTML += '<p>Aucune instruction disponible.</p>';
-    }
-
-    content.innerHTML = `
-        <img src="${recipe.img}" class="modal-header-img" alt="${recipe.title}">
-        <div class="modal-body">
-            <h2>${recipe.title}</h2>
-            ${ingredientsHTML}
-            ${stepsHTML}
-        </div>
-    `;
-
-    modal.classList.add('show');
-
-    document.getElementById('close-modal').onclick = () => {
-        modal.classList.remove('show');
-    };
-}
+// ... CONSERVE STRICTEMENT LE RESTE DE TON FICHIER (attachSwipeEvents, swipeCard, openCookingMode) ...
